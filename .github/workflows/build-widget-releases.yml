@@ -1,0 +1,63 @@
+name: Build widget releases
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.widget.title }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        widget:
+          - id: better-now-playing
+            artifact: BetterNowPlayingCommunity
+            tag: better-now-playing-community-1.05.1
+            title: Better Now Playing Community 1.05.1
+            notes: Community build of Better Now Playing.
+          - id: dock
+            artifact: DockCommunity
+            tag: dock-community-1.4.1
+            title: Dock Community 1.4.1
+            notes: Community build of Dock. Preserve upstream attribution and review license status before redistribution.
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install CocoaPods
+        run: |
+          if ! command -v pod >/dev/null 2>&1; then
+            sudo gem install cocoapods
+          fi
+
+      - name: Build widget
+        run: ./scripts/build-widget.sh "${{ matrix.widget.id }}"
+
+      - name: Package widget
+        run: |
+          POCK_PATH="$(find ".build/Products/${{ matrix.widget.id }}" -name '*.pock' -print -quit)"
+          if [ -z "$POCK_PATH" ]; then
+            echo "No .pock bundle found"
+            exit 1
+          fi
+          ./scripts/package-widget.sh "$POCK_PATH" "${{ matrix.widget.artifact }}"
+
+      - name: Publish release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ matrix.widget.tag }}
+          TITLE: ${{ matrix.widget.title }}
+          NOTES: ${{ matrix.widget.notes }}
+          ASSET: dist/${{ matrix.widget.artifact }}.pkarchive
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ASSET" --clobber
+          else
+            gh release create "$TAG" "$ASSET" --target "$GITHUB_SHA" --title "$TITLE" --notes "$NOTES"
+          fi
+
