@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSPrincipalClass</key>
+	<string>Better_Now_Playing.NowPlayingWidget</string>
+	<key>PKWidgetAuthor</key>
+	<string>JosephPri / Pock Community</string>
+	<key>PKWidgetCommunityEdition</key>
+	<true/>
+	<key>PKWidgetCommunityRepository</key>
+	<string>https://github.com/kalech7/pock-community-widgets</string>
+	<key>PKWidgetName</key>
+	<string>Better Now Playing Community</string>
+	<key>PKWidgetPreferenceClass</key>
+	<string>Better_Now_Playing.NowPlayingPreferencePane</string>
+	<key>PKWidgetUpstreamRepository</key>
+	<string>https://github.com/JosephPri/Better-Now-Playing-Pock-Widget</string>
+</dict>
+</plist>
