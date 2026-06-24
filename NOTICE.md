@@ -31,4 +31,3 @@ rights holder.
 Files added outside imported upstream source, including this notice, catalog
 JSON files, and packaging scripts, are maintained by Pock Community
 contributors under the MIT license in `LICENSE.md`.
-

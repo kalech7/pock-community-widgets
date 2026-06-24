@@ -8,6 +8,28 @@ The goal is to keep useful Pock widgets buildable, attributable, and packaged
 as `.pock` or `.pkarchive` artifacts that `pock-community` can install through a
 small JSON catalog.
 
+## Repositorios Community
+
+- Pock Community app:
+  `https://github.com/kalech7/pock-community`
+- Community widgets:
+  `https://github.com/kalech7/pock-community-widgets`
+
+## Donde Estan Los Widgets
+
+Los widgets mantenidos por la comunidad viven en este repo:
+
+- Better Now Playing Community:
+  `widgets/better-now-playing/`
+- Dock Community:
+  `widgets/dock/`
+
+Los catalogos que `pock-community` puede usar para instalar o actualizar
+widgets estan en:
+
+- `catalog/defaults.json`
+- `catalog/latestVersions.json`
+
 ## Included Widgets
 
 | Widget | Community bundle id | Upstream | Community version |
@@ -63,5 +85,5 @@ Release URLs currently target the expected future GitHub repository:
 This repository is a collection of upstream snapshots plus community metadata.
 Community-authored repository scaffolding is MIT licensed. Each imported widget
 keeps its original attribution and license status. See `AUTHORS.md`,
-`NOTICE.md`, and each widget folder before publishing release artifacts.
-
+`NOTICE.md`, and each widget folder before publishing release artifacts. Dock
+release artifacts remain pending upstream license confirmation.
