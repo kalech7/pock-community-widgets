@@ -15,6 +15,10 @@ extension Notification.Name {
 }
 
 class NowPlayingHelper {
+    private enum Constants {
+        static let periodicRefreshInterval: TimeInterval = 5
+        static let nativeTouchUIKillInterval: TimeInterval = 2
+    }
     
     /// Data
     public private(set) var currentNowPlayingItem: NowPlayingItem?
@@ -92,9 +96,11 @@ class NowPlayingHelper {
     }
     
     private func startPeriodicRefresh() {
-        let timer = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
+        guard refreshTimer == nil else { return }
+        let timer = Timer(timeInterval: Constants.periodicRefreshInterval, repeats: true) { [weak self] _ in
             self?.periodicRefresh()
         }
+        timer.tolerance = 1
         RunLoop.main.add(timer, forMode: .common)
         refreshTimer = timer
     }
@@ -105,12 +111,15 @@ class NowPlayingHelper {
     }
     
     private func startKillTimer() {
+        guard killTimer == nil else { return }
         // Even with launchctl disable, mediaremoted can still spawn NowPlayingTouchUI
-        // directly on certain triggers (app switch, media state change). Poll every 0.5s
-        // and use bootout rather than killall so launchd doesn't treat it as a crash.
-        let timer = Timer(timeInterval: 0.3, repeats: true) { [weak self] _ in
+        // directly on certain triggers (app switch, media state change). Poll as a
+        // backup to launch notifications and use bootout rather than killall so
+        // launchd doesn't treat it as a crash.
+        let timer = Timer(timeInterval: Constants.nativeTouchUIKillInterval, repeats: true) { [weak self] _ in
             self?.killNowPlayingTouchUIIfRunning()
         }
+        timer.tolerance = 0.5
         RunLoop.main.add(timer, forMode: .common)
         killTimer = timer
     }
@@ -149,6 +158,7 @@ class NowPlayingHelper {
             let timer = Timer(timeInterval: TimeInterval(timeout), repeats: false) { [weak self] _ in
                 self?.handlePauseTimeout()
             }
+            timer.tolerance = min(TimeInterval(timeout) * 0.1, 10)
             RunLoop.main.add(timer, forMode: .common)
             inactivityTimer = timer
             print("[NowPlayingHelper] Pause timeout started — will hide in \(timeout)s")
@@ -172,6 +182,7 @@ class NowPlayingHelper {
     private func periodicRefresh() {
         // Refresh if something is playing OR if we have a client set
         // (covers transitions where isPlaying is briefly false)
+        guard view?.isSuppressedForDisplay != true else { return }
         guard let currentItem = currentNowPlayingItem,
               currentItem.isPlaying || currentItem.client != nil else { return }
         

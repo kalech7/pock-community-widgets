@@ -20,7 +20,7 @@ class DockRepository {
 	
 	/// Core
 	private var fileMonitor: FileMonitor!
-	private var notificationBadgeRefreshTimer: Timer!
+	private var notificationBadgeRefreshTimer: Timer?
 	private var shouldShowNotificationBadge: Bool {
 		let refreshInterval: NotificationBadgeRefreshRateKeys = Preferences[.notificationBadgeRefreshInterval]
 		return refreshInterval != .never
@@ -71,11 +71,14 @@ class DockRepository {
 			return
 		}
 		/// Set timer for fetching badges
-		self.notificationBadgeRefreshTimer = Timer.scheduledTimer(withTimeInterval: refreshRate.rawValue, repeats: true, block: {  [weak self] _ in
+		let timer = Timer(timeInterval: refreshRate.rawValue, repeats: true, block: { [weak self] _ in
 			DispatchQueue.main.async { [weak self] in
 				self?.updateNotificationBadges()
 			}
 		})
+		timer.tolerance = min(max(refreshRate.rawValue * 0.2, 0.05), 5)
+		RunLoop.main.add(timer, forMode: .common)
+		self.notificationBadgeRefreshTimer = timer
 	}
 	
 }
@@ -101,21 +104,14 @@ extension DockRepository {
 	
 	// MARK: Events
 	private func registerForRunningAppsEvents() {
-		self.keyValueObservers = [
-			NSWorkspace.shared.observe(\.runningApplications, options: [.old, .new], changeHandler: { [weak self] _, change in
-				if let apps = change.newValue {
-					for app in apps {
-						self?.updateRunningState(for: app, wasLaunched: true)
-					}
-				}else if let apps = change.oldValue {
-					for app in apps {
-						self?.updateRunningState(for: app, wasTerminated: true)
-					}
-				}else {
-					self?.loadRunningItems()
-				}
-			})
-		]
+		NSWorkspace.shared.notificationCenter.addObserver(self,
+														  selector: #selector(handleAppLaunched(_:)),
+														  name: NSWorkspace.didLaunchApplicationNotification,
+														  object: nil)
+		NSWorkspace.shared.notificationCenter.addObserver(self,
+														  selector: #selector(handleAppTerminated(_:)),
+														  name: NSWorkspace.didTerminateApplicationNotification,
+														  object: nil)
 	}
 	
 	// MARK: Notifications
@@ -355,6 +351,22 @@ extension DockRepository {
 		}
 		NSLog("[DockRepositoryEvo]: Update running state for app: [\(app.bundleIdentifier ?? "<unknown-app-\(app)>")]")
 	}
+
+	@objc private func handleAppLaunched(_ notification: NSNotification?) {
+		guard let app = notification?.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else {
+			loadRunningItems()
+			return
+		}
+		updateRunningState(for: app, wasLaunched: true)
+	}
+
+	@objc private func handleAppTerminated(_ notification: NSNotification?) {
+		guard let app = notification?.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else {
+			loadRunningItems()
+			return
+		}
+		updateRunningState(for: app, wasTerminated: true)
+	}
 	
 	/// Update active state
 	@objc private func updateActiveState(_ notification: NSNotification?) {
@@ -380,10 +392,19 @@ extension DockRepository {
 		guard shouldShowNotificationBadge, let delegate = self.dockDelegate else {
 			return
 		}
+		let helper = PockDockHelper()
+		var changedItems: [DockItem] = []
 		for item in dockItems {
-			item.badge = PockDockHelper().getBadgeCountForItem(withName: item.name)
+			let badge = helper.getBadgeCountForItem(withName: item.name)
+			if item.badge != badge {
+				item.badge = badge
+				changedItems.append(item)
+			}
 		}
-		delegate.didUpdateBadge(for: self.dockItems)
+		guard changedItems.isEmpty == false else {
+			return
+		}
+		delegate.didUpdateBadge(for: changedItems)
 	}
 }
 

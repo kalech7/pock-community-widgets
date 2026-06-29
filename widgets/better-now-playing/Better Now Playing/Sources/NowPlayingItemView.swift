@@ -27,6 +27,8 @@ class NowPlayingItemView: PKDetailView {
     /// Data
     private var nowPLayingItem: NowPlayingItem?
     private var containerConstraints: [NSLayoutConstraint] = []
+    private var glowSourceKey: String?
+    private var pendingGlowSourceKey: String?
     
     /// Returns the inset in points based on the artworkSize preference:
     /// 0 = Extra Large (0pt = 60px), 1 = Large (1pt = 56px), 2 = Medium (2pt = 52px), 3 = Small (3pt = 48px)
@@ -156,8 +158,8 @@ class NowPlayingItemView: PKDetailView {
     // PKDetailView.startBounceAnimation() is in a non-open extension so can't be overridden.
     // We add our own smoother animation directly and call this instead.
     private func startSmoothBounceAnimation() {
-        stopBounceAnimation()
         guard let layer = imageView?.layer else { return }
+        guard layer.animation(forKey: "kBounceAnimationKey") == nil else { return }
         let bounce = CABasicAnimation(keyPath: "transform.scale")
         bounce.fromValue = 0.88
         bounce.toValue = 1.0
@@ -188,8 +190,13 @@ class NowPlayingItemView: PKDetailView {
     }
 
     private func startGlowAnimation() {
-        stopGlowAnimation()
         guard let imageLayer = imageView?.layer else { return }
+        let sourceKey = pendingGlowSourceKey ?? ""
+        if glowSourceKey == sourceKey,
+           imageLayer.sublayers?.contains(where: { $0.name == "glowOverlayLayer" }) == true {
+            return
+        }
+        stopGlowAnimation()
         
         // Choose glow color and direction based on artwork luminance
         let luminance = artworkLuminance()
@@ -232,9 +239,11 @@ class NowPlayingItemView: PKDetailView {
         expand.repeatCount = .infinity
         expand.timingFunction = CAMediaTimingFunction(controlPoints: 0.45, 0.0, 0.55, 1.0)
         glowLayer.add(expand, forKey: "kGlowExpandKey")
+        glowSourceKey = sourceKey
     }
     
     private func stopGlowAnimation() {
+        glowSourceKey = nil
         imageView?.layer?.removeAnimation(forKey: "kDimAnimationKey")
         imageView?.layer?.opacity = 1.0
         imageView?.layer?.sublayers?
@@ -266,6 +275,7 @@ class NowPlayingItemView: PKDetailView {
         } else {
             imageView.image = client.icon
         }
+        pendingGlowSourceKey = "\(item.title ?? "")|\(item.artist ?? "")|\(item.artwork != nil)|\(Preferences[.artworkSize])"
         // Set maxWidth BEFORE set(title:) so updateConstraint sees the cap in time
         maxWidth = effectiveMaxWidth
         
@@ -323,13 +333,21 @@ class NowPlayingItemView: PKDetailView {
     
     override func removeFromSuperview() {
         super.removeFromSuperview()
-        self.stopBounceAnimation()
-        self.stopGlowAnimation()
+        prepareForHiddenState()
     }
     
     override func viewDidMoveToSuperview() {
         super.viewDidMoveToSuperview()
-        self.updateUIState(for: nowPLayingItem)
+        if superview == nil {
+            prepareForHiddenState()
+        } else {
+            self.updateUIState(for: nowPLayingItem)
+        }
+    }
+
+    internal func prepareForHiddenState() {
+        self.stopBounceAnimation()
+        self.stopGlowAnimation()
     }
     
 }

@@ -55,6 +55,10 @@ class NowPlayingView: PKView {
         }
         return false
     }
+
+    internal var isSuppressedForDisplay: Bool {
+        return shouldHideWidget
+    }
     
     /// Styles
     public var style: NowPlayingWidgetStyle {
@@ -209,6 +213,7 @@ class NowPlayingView: PKView {
         
         if shouldHideWidget {
             print("[NowPlayingView] updateContentViews - hiding widget")
+            itemView?.prepareForHiddenState()
             // Hide subviews rather than destroying them so we don't lose state
             for view in stackView.arrangedSubviews {
                 view.isHidden = true

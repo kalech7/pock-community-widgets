@@ -3,20 +3,20 @@
     "changelog": "Community-maintained Pock build.",
     "core_min": null,
     "link": "https://github.com/kalech7/pock-community/releases",
-    "name": "0.10.0-5"
+    "name": "0.10.0-6"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
-      "changelog": "Community edition of Better Now Playing with community bundle metadata and update URLs.",
+      "changelog": "Optimizes Better Now Playing stream debounce, periodic refreshes, idle timers, and hidden-state animations.",
       "core_min": "0.10.0-5",
-      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.1/BetterNowPlayingCommunity.pkarchive",
-      "name": "1.05.1"
+      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.2/BetterNowPlayingCommunity.pkarchive",
+      "name": "1.05.2"
     },
     "community.pock.widgets.dock": {
-      "changelog": "Community edition of Dock with community bundle metadata.",
+      "changelog": "Optimizes Dock widget timers, launch events, badge refreshes, and hidden-state teardown.",
       "core_min": "0.10.0-5",
-      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/dock-community-1.4.1/DockCommunity.pkarchive",
-      "name": "1.4.1"
+      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/dock-community-1.4.2/DockCommunity.pkarchive",
+      "name": "1.4.2"
     }
   }
 }

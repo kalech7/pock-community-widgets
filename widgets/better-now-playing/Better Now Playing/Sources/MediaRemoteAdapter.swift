@@ -42,7 +42,7 @@ class MediaRemoteAdapter {
     // Debounce - batches rapid updates into one clean notification
     // debounceWorkItem is only ever scheduled/cancelled on main queue
     private var debounceWorkItem: DispatchWorkItem?
-    private let debounceInterval: TimeInterval = 0.15
+    private let debounceInterval: TimeInterval = 0.2
     
     // Accumulated changes during debounce window
     // Protected by stateQueue
@@ -74,7 +74,7 @@ class MediaRemoteAdapter {
         guard let process = streamProcess, let pipe = streamPipe else { return }
         
         process.executableURL = URL(fileURLWithPath: "/usr/bin/perl")
-        process.arguments = [perlScriptPath, frameworkPath, "stream", "--debounce=50"]
+        process.arguments = [perlScriptPath, frameworkPath, "stream", "--debounce=125"]
         process.standardOutput = pipe
         
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in

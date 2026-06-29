@@ -17,3 +17,7 @@ target 'Dock' do
   pod 'TinyConstraints'
 
 end
+
+post_install do |_installer|
+  system('ruby', File.expand_path('../../scripts/patch-pockkit-resource-usage.rb', __dir__), __dir__)
+end

@@ -19,6 +19,7 @@ class DockWidget: NSObject, PKWidget, PKScreenEdgeMouseDelegate {
 	/// Core
 	private var dockRepository: 	  DockRepository!
 	private var dropDispatchWorkItem: DispatchWorkItem?
+	private var isInitialized = false
 	
 	/// UI
 	private var stackView:          NSStackView! = NSStackView(frame: .zero)
@@ -56,6 +57,10 @@ class DockWidget: NSObject, PKWidget, PKScreenEdgeMouseDelegate {
 	}
 	
 	func initialize() {
+		guard isInitialized == false else {
+			return
+		}
+		isInitialized = true
 		self.configureStackView()
 		self.configureDockScrubber()
 		self.configureSeparator()
@@ -87,9 +92,22 @@ class DockWidget: NSObject, PKWidget, PKScreenEdgeMouseDelegate {
 	}
 	
 	func viewDidDisappear() {
-		deepReload(nil)
+		tearDown()
 		itemViewWithMouseOver = nil
+	}
+
+	private func tearDown() {
+		dropDispatchWorkItem?.cancel()
+		dropDispatchWorkItem = nil
+		itemViewWithDraggingOver = nil
+		deepReload(nil)
+		dockRepository = nil
 		NSWorkspace.shared.notificationCenter.removeObserver(self)
+		for view in stackView.arrangedSubviews {
+			stackView.removeArrangedSubview(view)
+			view.removeFromSuperview()
+		}
+		isInitialized = false
 	}
 	
 	@objc private func deepReload(_ notification: NSNotification?) {
@@ -336,9 +354,11 @@ extension DockWidget: DockDelegate {
 	func didUpdateBadge(for apps: [DockItem]) {
 		DispatchQueue.main.async { [weak self] in
 			guard let s = self else { return }
-			s.cachedDockItemViews.forEach({ view in
-				view.set(hasBadge: apps.first(where: { $0.diffId == view.diffId })?.hasBadge ?? false)
-			})
+			for app in apps {
+				s.cachedDockItemViews
+					.first(where: { $0.diffId == app.diffId })?
+					.set(hasBadge: app.hasBadge)
+			}
 		}
 	}
 	

@@ -15,4 +15,5 @@ post_install do |installer|
       config.build_settings['ARCHS'] = '$(ARCHS_STANDARD)'
     end
   end
+  system('ruby', File.expand_path('../../scripts/patch-pockkit-resource-usage.rb', __dir__), __dir__)
 end
