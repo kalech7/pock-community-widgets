@@ -3,14 +3,14 @@
     "changelog": "Community-maintained Pock build.",
     "core_min": null,
     "link": "https://github.com/kalech7/pock-community/releases",
-    "name": "0.10.0-6"
+    "name": "0.10.0-7"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
-      "changelog": "Optimizes Better Now Playing stream debounce, periodic refreshes, idle timers, and hidden-state animations.",
+      "changelog": "Fixes local startup crash in Better Now Playing glow animation state while keeping the resource optimizations from 1.05.2.",
       "core_min": "0.10.0-5",
-      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.2/BetterNowPlayingCommunity.pkarchive",
-      "name": "1.05.2"
+      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.3/BetterNowPlayingCommunity.pkarchive",
+      "name": "1.05.3"
     },
     "community.pock.widgets.dock": {
       "changelog": "Optimizes Dock widget timers, launch events, badge refreshes, and hidden-state teardown.",

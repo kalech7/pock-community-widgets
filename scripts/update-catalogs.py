@@ -8,7 +8,7 @@ import widget_metadata
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CATALOG_DIR = ROOT / "catalog"
-CORE_VERSION = "0.10.0-6"
+CORE_VERSION = "0.10.0-7"
 
 
 def main():

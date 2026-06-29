@@ -275,7 +275,8 @@ class NowPlayingItemView: PKDetailView {
         } else {
             imageView.image = client.icon
         }
-        pendingGlowSourceKey = "\(item.title ?? "")|\(item.artist ?? "")|\(item.artwork != nil)|\(Preferences[.artworkSize])"
+        let artworkSize: Int = Preferences[.artworkSize]
+        pendingGlowSourceKey = "\(item.title ?? "")|\(item.artist ?? "")|\(item.artwork != nil)|\(artworkSize)"
         // Set maxWidth BEFORE set(title:) so updateConstraint sees the cap in time
         maxWidth = effectiveMaxWidth
         
