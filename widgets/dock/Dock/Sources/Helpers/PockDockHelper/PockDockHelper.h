@@ -26,6 +26,8 @@ extern AXError _AXUIElementGetWindow(AXUIElementRef window, CGWindowID *windowID
 @interface PockDockHelper : NSObject
 @property (nonatomic, retain) NSDictionary *dockItems;
 
++ (BOOL)isAccessibilityTrustedWithPrompt:(BOOL)prompt;
++ (BOOL)isScreenCaptureTrustedWithPrompt:(BOOL)prompt;
 - (NSString *)getBadgeCountForItemWithName:(NSString *)name;
 - (NSArray *)getWindowsOfApp:(pid_t)pid;
 - (BOOL)windowIsFrontmost:(CGWindowID)wid forApp:(NSRunningApplication *)app;

@@ -29,6 +29,21 @@ void SafeCFRelease(CFTypeRef cf) {
 
 @implementation PockDockHelper
 
++ (BOOL)isAccessibilityTrustedWithPrompt:(BOOL)prompt {
+    NSDictionary *options = @{(__bridge NSString *)kAXTrustedCheckOptionPrompt: @(prompt)};
+    return AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)options);
+}
+
++ (BOOL)isScreenCaptureTrustedWithPrompt:(BOOL)prompt {
+    if (@available(macOS 10.15, *)) {
+        if (CGPreflightScreenCaptureAccess()) {
+            return YES;
+        }
+        return prompt ? CGRequestScreenCaptureAccess() : NO;
+    }
+    return YES;
+}
+
 + (PockDockHelper *)sharedInstance {
     static PockDockHelper *sharedInstance = NULL;
     @synchronized(self) {
@@ -130,6 +145,10 @@ void SafeCFRelease(CFTypeRef cf) {
 - (NSArray *)getWindowsOfApp:(pid_t)pid {
     
     if (pid <= 0) { return NULL; }
+    if (![PockDockHelper isAccessibilityTrustedWithPrompt:YES]) {
+        NSLog(@"[DockWidget]: Accessibility permission is required to show app windows.");
+        return NULL;
+    }
     AXUIElementRef elementRef = AXUIElementCreateApplication(pid);
     
     // TODO: Need to fix a leak here
@@ -167,6 +186,10 @@ void SafeCFRelease(CFTypeRef cf) {
 }
 
 - (NSImage *)getScreenshotOfWindowId:(NSNumber *)wid {
+    if (![PockDockHelper isScreenCaptureTrustedWithPrompt:YES]) {
+        NSLog(@"[DockWidget]: Screen Recording permission is required to show window previews.");
+        return NULL;
+    }
     CGWindowListOption option = kCGWindowListOptionIncludingWindow;
     CGImageRef windowImage = CGWindowListCreateImage(CGRectNull, option, wid.unsignedIntValue, kCGWindowImageDefault);
     if (windowImage == NULL) { return NULL; }

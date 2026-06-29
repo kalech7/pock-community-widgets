@@ -491,6 +491,11 @@ extension DockRepository {
 	@discardableResult
 	private func activate(app: NSRunningApplication?) -> Bool {
 		guard let app = app else { return false }
+		let settings: AppExposeSettings = Preferences[.appExposeSettings]
+		if settings != .never, !PockDockHelper.isAccessibilityTrusted(withPrompt: true) {
+			NSLog("[DockWidget]: Accessibility permission is required to show windows for `\(app.bundleIdentifier ?? "unknown")`.")
+			return app.activate(options: .activateIgnoringOtherApps)
+		}
 		let _windows = PockDockHelper().getWindowsOfApp(app.processIdentifier) as NSArray?
 		
 		if let windows = _windows as? [AppExposeItem], activateExpose(with: windows, app: app) {
