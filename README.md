@@ -8,24 +8,23 @@ The goal is to keep useful Pock widgets buildable, attributable, and packaged
 as `.pock` or `.pkarchive` artifacts that `pock-community` can install through a
 small JSON catalog.
 
-## Repositorios Community
+## Community Repositories
 
-- Pock Community app:
+- Pock Community app repository:
   `https://github.com/kalech7/pock-community`
-- Community widgets:
+- Pock Community widgets repository:
   `https://github.com/kalech7/pock-community-widgets`
 
-## Donde Estan Los Widgets
+## Widget Locations
 
-Los widgets mantenidos por la comunidad viven en este repo:
+The community-maintained widgets live in this repository:
 
 - Better Now Playing Community:
   `widgets/better-now-playing/`
 - Dock Community:
   `widgets/dock/`
 
-Los catalogos que `pock-community` puede usar para instalar o actualizar
-widgets estan en:
+The catalogs that `pock-community` can use to install or update widgets live in:
 
 - `catalog/defaults.json`
 - `catalog/latestVersions.json`
