@@ -31,10 +31,10 @@ The catalogs that `pock-community` can use to install or update widgets live in:
 
 ## Included Widgets
 
-| Widget | Community bundle id | Upstream | Community version |
-| --- | --- | --- | --- |
-| Better Now Playing Community | `community.pock.widgets.betternowplaying` | `JosephPri/Better-Now-Playing-Pock-Widget` | `1.05.1` |
-| Dock Community | `community.pock.widgets.dock` | `pock/dock-widget` | `1.4.1` |
+| Widget | Slug | Community bundle id | Upstream | Community version |
+| --- | --- | --- | --- | --- |
+| Better Now Playing Community | `better-now-playing` | `community.pock.widgets.betternowplaying` | `JosephPri/Better-Now-Playing-Pock-Widget` | `1.05.1` |
+| Dock Community | `dock` | `community.pock.widgets.dock` | `pock/dock-widget` | `1.4.1` |
 
 ## Community Changes
 
@@ -63,11 +63,68 @@ Build one widget:
 Package a built `.pock` bundle:
 
 ```sh
-./scripts/package-widget.sh "/path/to/Better Now Playing.pock" BetterNowPlayingCommunity
-./scripts/package-widget.sh "/path/to/Dock.pock" DockCommunity
+./scripts/package-widget.sh better-now-playing
+./scripts/package-widget.sh dock
 ```
 
 The package script writes `.pkarchive` files into `dist/`.
+
+## Widget Metadata
+
+Each widget has a `widget.json` file that is the source of truth for build,
+release, and catalog metadata:
+
+```json
+{
+  "slug": "example-widget",
+  "name": "Example Widget Community",
+  "bundleIdentifier": "community.pock.widgets.examplewidget",
+  "version": "1.0.0",
+  "artifact": "ExampleWidgetCommunity",
+  "releaseTag": "example-widget-community-1.0.0",
+  "releaseTitle": "Example Widget Community 1.0.0",
+  "changelog": "Initial community release.",
+  "coreMin": "0.10.0-5",
+  "enabledByDefault": false,
+  "workspace": "Example Widget.xcworkspace",
+  "scheme": "Example Widget",
+  "pockName": "Example Widget.pock",
+  "requiresMediaRemoteAdapter": false,
+  "licenseStatus": "MIT"
+}
+```
+
+Useful metadata commands:
+
+```sh
+./scripts/widget_metadata.py list
+./scripts/widget_metadata.py json better-now-playing
+./scripts/widget_metadata.py asset-url dock
+```
+
+## Creating A Widget
+
+Create a scaffold:
+
+```sh
+./scripts/new-widget.sh example-widget "Example Widget Community"
+```
+
+The scaffold creates `widget.json`, `Podfile`, `Info.plist`, a starter Swift
+file, and community documentation. Then create the matching macOS bundle target
+in Xcode as described in the generated widget README.
+
+## Catalog Generation
+
+Catalog files are generated from all `widgets/*/widget.json` files:
+
+```sh
+./scripts/update-catalogs.py
+./scripts/check-catalog-json.sh
+```
+
+Do not edit catalog URLs by hand unless you also update the matching
+`widget.json`.
 
 ## Catalogs
 
@@ -84,8 +141,8 @@ Release URLs currently target the expected future GitHub repository:
 The release process is documented in `MAINTAINING.md`. In short:
 
 1. Change the widget version.
-2. Update `catalog/defaults.json`.
-3. Update `catalog/latestVersions.json`.
+2. Update the widget's `widget.json`.
+3. Run `./scripts/update-catalogs.py`.
 4. Commit and push the changes.
 5. Run the `Build widget releases` GitHub Actions workflow.
 6. Verify that the GitHub release asset exists and that GitHub Pages serves the

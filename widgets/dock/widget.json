@@ -1,0 +1,17 @@
+{
+  "slug": "dock",
+  "name": "Dock Community",
+  "bundleIdentifier": "community.pock.widgets.dock",
+  "version": "1.4.1",
+  "artifact": "DockCommunity",
+  "releaseTag": "dock-community-1.4.1",
+  "releaseTitle": "Dock Community 1.4.1",
+  "changelog": "Community edition of Dock with community bundle metadata.",
+  "coreMin": "0.10.0-5",
+  "enabledByDefault": true,
+  "workspace": "Dock.xcworkspace",
+  "scheme": "Dock",
+  "pockName": "Dock.pock",
+  "requiresMediaRemoteAdapter": false,
+  "licenseStatus": "MIT_REQUIRED"
+}

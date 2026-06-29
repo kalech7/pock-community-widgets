@@ -1,23 +1,22 @@
 {
   "core": {
-    "name": "0.10.0-5",
-    "link": "https://github.com/kalech7/pock-community/releases",
     "changelog": "Community-maintained Pock build.",
-    "core_min": null
+    "core_min": null,
+    "link": "https://github.com/kalech7/pock-community/releases",
+    "name": "0.10.0-5"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
-      "name": "1.05.1",
-      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.1/BetterNowPlayingCommunity.pkarchive",
       "changelog": "Community edition of Better Now Playing with community bundle metadata and update URLs.",
-      "core_min": "0.10.0-5"
+      "core_min": "0.10.0-5",
+      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.1/BetterNowPlayingCommunity.pkarchive",
+      "name": "1.05.1"
     },
     "community.pock.widgets.dock": {
-      "name": "1.4.1",
-      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/dock-community-1.4.1/DockCommunity.pkarchive",
       "changelog": "Community edition of Dock with community bundle metadata.",
-      "core_min": "0.10.0-5"
+      "core_min": "0.10.0-5",
+      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/dock-community-1.4.1/DockCommunity.pkarchive",
+      "name": "1.4.1"
     }
   }
 }
-

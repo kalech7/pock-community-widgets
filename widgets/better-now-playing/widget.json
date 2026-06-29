@@ -1,0 +1,17 @@
+{
+  "slug": "better-now-playing",
+  "name": "Better Now Playing Community",
+  "bundleIdentifier": "community.pock.widgets.betternowplaying",
+  "version": "1.05.1",
+  "artifact": "BetterNowPlayingCommunity",
+  "releaseTag": "better-now-playing-community-1.05.1",
+  "releaseTitle": "Better Now Playing Community 1.05.1",
+  "changelog": "Community edition of Better Now Playing with community bundle metadata and update URLs.",
+  "coreMin": "0.10.0-5",
+  "enabledByDefault": true,
+  "workspace": "Better Now Playing.xcworkspace",
+  "scheme": "Better Now Playing",
+  "pockName": "Better Now Playing.pock",
+  "requiresMediaRemoteAdapter": true,
+  "licenseStatus": "MIT"
+}

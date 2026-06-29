@@ -17,9 +17,11 @@ intact.
    - community widget author field
    - community update URLs
    - community version bump
+   - `widget.json`
 5. Run:
 
 ```sh
+./scripts/update-catalogs.py
 ./scripts/check-catalog-json.sh
 plutil -lint widgets/better-now-playing/Better\ Now\ Playing/Info.plist widgets/dock/Dock/Info.plist
 ```
@@ -35,11 +37,15 @@ plutil -lint widgets/better-now-playing/Better\ Now\ Playing/Info.plist widgets/
 
 1. Confirm license status for every widget being published.
 2. Change the widget version in the Xcode project build settings.
-3. Update `catalog/defaults.json` with the release asset URL for the new
-   `.pkarchive`.
-4. Update `catalog/latestVersions.json` with the new version, release asset URL,
-   changelog, and `core_min` value.
-5. Commit and push the source and catalog changes.
+3. Update the widget's `widget.json` with the new `version`, `releaseTag`,
+   `releaseTitle`, and `changelog`.
+4. Regenerate catalogs:
+
+```sh
+./scripts/update-catalogs.py
+```
+
+5. Commit and push the source, metadata, and catalog changes.
 6. Run the GitHub Actions workflow named `Build widget releases` from the
    repository Actions tab, or from the command line:
 
@@ -82,21 +88,31 @@ upstream rights holder grants MIT-compatible permission.
 For a Better Now Playing update from `1.05.1` to `1.05.2`:
 
 1. Change the widget's `MARKETING_VERSION` to `1.05.2`.
-2. Update `catalog/defaults.json` to point at:
-
-```text
-https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.2/BetterNowPlayingCommunity.pkarchive
-```
-
-3. Update `catalog/latestVersions.json`:
+2. Update `widgets/better-now-playing/widget.json`:
 
 ```json
-"community.pock.widgets.betternowplaying": {
-  "name": "1.05.2",
-  "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.2/BetterNowPlayingCommunity.pkarchive",
-  "changelog": "Describe the user-visible changes here.",
-  "core_min": "0.10.0-5"
-}
+"version": "1.05.2",
+"releaseTag": "better-now-playing-community-1.05.2",
+"releaseTitle": "Better Now Playing Community 1.05.2",
+"changelog": "Describe the user-visible changes here."
+```
+
+3. Regenerate catalogs:
+
+```sh
+./scripts/update-catalogs.py
 ```
 
 4. Push the change and run `Build widget releases`.
+
+## Local One-Widget Release
+
+When you have full Xcode locally, you can build, package, publish, and
+regenerate catalogs for one widget with:
+
+```sh
+./scripts/release-widget.sh better-now-playing
+```
+
+For CI-driven releases, prefer the GitHub Actions workflow so artifacts are
+built in a consistent macOS runner.

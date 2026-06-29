@@ -5,7 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WIDGET="${1:-}"
 
 usage() {
-  echo "Usage: $0 <better-now-playing|dock>" >&2
+  echo "Usage: $0 <widget-slug>" >&2
+  echo "Available widgets:" >&2
+  "$ROOT_DIR/scripts/widget_metadata.py" list >&2
 }
 
 if [[ -z "$WIDGET" ]]; then
@@ -13,28 +15,16 @@ if [[ -z "$WIDGET" ]]; then
   exit 64
 fi
 
-case "$WIDGET" in
-  better-now-playing)
-    WIDGET_DIR="$ROOT_DIR/widgets/better-now-playing"
-    WORKSPACE="$WIDGET_DIR/Better Now Playing.xcworkspace"
-    SCHEME="Better Now Playing"
-    ;;
-  dock)
-    WIDGET_DIR="$ROOT_DIR/widgets/dock"
-    WORKSPACE="$WIDGET_DIR/Dock.xcworkspace"
-    SCHEME="Dock"
-    ;;
-  *)
-    usage
-    exit 64
-    ;;
-esac
+WIDGET_DIR="$ROOT_DIR/widgets/$WIDGET"
+WORKSPACE="$WIDGET_DIR/$("$ROOT_DIR/scripts/widget_metadata.py" field "$WIDGET" workspace)"
+SCHEME="$("$ROOT_DIR/scripts/widget_metadata.py" field "$WIDGET" scheme)"
+REQUIRES_MEDIA_REMOTE="$("$ROOT_DIR/scripts/widget_metadata.py" field "$WIDGET" requiresMediaRemoteAdapter 2>/dev/null || echo false)"
 
 if [[ -f "$WIDGET_DIR/Podfile" ]]; then
   (cd "$WIDGET_DIR" && pod install)
 fi
 
-if [[ "$WIDGET" == "better-now-playing" ]]; then
+if [[ "$REQUIRES_MEDIA_REMOTE" == "true" ]]; then
   if [[ -d "$WIDGET_DIR/mediaremote-adapter" ]]; then
     cmake -S "$WIDGET_DIR/mediaremote-adapter" -B "$WIDGET_DIR/mediaremote-adapter/build"
     cmake --build "$WIDGET_DIR/mediaremote-adapter/build"
