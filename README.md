@@ -79,10 +79,23 @@ The package script writes `.pkarchive` files into `dist/`.
 Release URLs currently target the expected future GitHub repository:
 `https://github.com/kalech7/pock-community-widgets`.
 
+## Release Process
+
+The release process is documented in `MAINTAINING.md`. In short:
+
+1. Change the widget version.
+2. Update `catalog/defaults.json`.
+3. Update `catalog/latestVersions.json`.
+4. Commit and push the changes.
+5. Run the `Build widget releases` GitHub Actions workflow.
+6. Verify that the GitHub release asset exists and that GitHub Pages serves the
+   updated catalog JSON.
+
 ## License And Attribution
 
 This repository is a collection of upstream snapshots plus community metadata.
 Community-authored repository scaffolding is MIT licensed. Each imported widget
 keeps its original attribution and license status. See `AUTHORS.md`,
 `NOTICE.md`, and each widget folder before publishing release artifacts. Dock
-release artifacts remain pending upstream license confirmation.
+Community must be distributed under MIT terms; new Dock artifacts require
+confirmed MIT licensing or MIT-compatible upstream permission.

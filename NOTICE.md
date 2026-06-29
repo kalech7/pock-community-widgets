@@ -26,6 +26,10 @@ for Pierluigi Galdi. Keep those notices intact. Before publishing public release
 artifacts, confirm the intended license or obtain permission from the upstream
 rights holder.
 
+Dock Community must be distributed under MIT terms. New Dock release artifacts
+must not be published unless the upstream Dock widget license is confirmed as
+MIT or the upstream rights holder grants MIT-compatible permission.
+
 ## Community Metadata
 
 Files added outside imported upstream source, including this notice, catalog
