@@ -294,20 +294,25 @@ extension DockWidget: DockDelegate {
 			guard let self = self else {
 				return
 			}
-			if let itemView = self.itemView(for: item) {
+			let shouldRemoveTerminatedItem = terminated && (!isDefaults || Preferences[.showOnlyRunningApps])
+			if shouldRemoveTerminatedItem {
 				if let currentIndex = self.dockItems.firstIndex(where: { $0.bundleIdentifier == item.bundleIdentifier }) {
-					if terminated && !isDefaults {
-						self.dockItems.remove(at: currentIndex)
+					self.dockItems.remove(at: currentIndex)
+					if currentIndex < self.dockScrubber.numberOfItems {
 						self.dockScrubber.removeItems(at: IndexSet(integer: currentIndex))
-						if let cachedViewIndex = self.cachedDockItemViews.firstIndex(where: { $0.diffId == item.diffId }) {
-							self.cachedDockItemViews.remove(at: cachedViewIndex)
-						}
-					}else {
-						itemView.set(isRunning:   item.isRunning)
-						itemView.set(isFrontmost: item.isFrontmost)
-						itemView.set(isLaunching: item.isLaunching)
-						self.dockScrubber.reloadItems(at: IndexSet(integer: currentIndex))
+					} else {
+						self.dockScrubber.reloadData()
 					}
+				}
+				if let cachedViewIndex = self.cachedDockItemViews.firstIndex(where: { $0.diffId == item.diffId }) {
+					self.cachedDockItemViews.remove(at: cachedViewIndex)
+				}
+			} else if let itemView = self.itemView(for: item) {
+				if let currentIndex = self.dockItems.firstIndex(where: { $0.bundleIdentifier == item.bundleIdentifier }) {
+					itemView.set(isRunning:   item.isRunning)
+					itemView.set(isFrontmost: item.isFrontmost)
+					itemView.set(isLaunching: item.isLaunching)
+					self.dockScrubber.reloadItems(at: IndexSet(integer: currentIndex))
 				}
 			}else {
 				if self.dockItems.contains(item) == false {
@@ -329,7 +334,7 @@ extension DockWidget: DockDelegate {
 			if self.dockScrubber.numberOfItems != self.dockItems.count {
 				self.dockScrubber.reloadData()
 			}else {
-				if terminated && !isDefaults {
+				if shouldRemoveTerminatedItem {
 					for (index,item) in self.dockItems.enumerated() {
 						self.updateView(for: item, isPersistent: item.isPersistentItem)
 						self.dockScrubber.reloadItems(at: IndexSet(integer: index))

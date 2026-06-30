@@ -3,7 +3,7 @@
     "changelog": "Community-maintained Pock build.",
     "core_min": null,
     "link": "https://github.com/kalech7/pock-community/releases",
-    "name": "0.10.0-7"
+    "name": "0.10.1-8"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
@@ -13,10 +13,10 @@
       "name": "1.05.4"
     },
     "community.pock.widgets.dock": {
-      "changelog": "Optimizes Dock widget timers, launch events, badge refreshes, and hidden-state teardown.",
+      "changelog": "Keeps running app state in sync so closed apps disappear smoothly and running-only Dock layouts stay current.",
       "core_min": "0.10.0-5",
-      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/dock-community-1.4.2/DockCommunity.pkarchive",
-      "name": "1.4.2"
+      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/dock-community-1.4.3/DockCommunity.pkarchive",
+      "name": "1.4.3"
     }
   }
 }

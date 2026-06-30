@@ -147,7 +147,18 @@ extension DockRepository {
 	
 	/// Running apps
 	@objc private func loadRunningItems() {
-		for app in NSWorkspace.shared.runningApplications {
+		let runningApps = NSWorkspace.shared.runningApplications
+		let runningBundleIdentifiers = Set(runningApps.compactMap({ $0.bundleIdentifier }))
+		for (index, item) in runningItems.enumerated().reversed() {
+			guard let bundleIdentifier = item.bundleIdentifier, runningBundleIdentifiers.contains(bundleIdentifier) == false else {
+				continue
+			}
+			runningItems.remove(at: index)
+			item.pid_t = 0
+			let isDefault = defaultItems.contains(where: { $0.bundleIdentifier == bundleIdentifier })
+			dockDelegate?.didUpdateDockItem(item, at: lastValidDockItemsIndex, terminated: true, isDefaults: isDefault)
+		}
+		for app in runningApps {
 			updateRunningState(for: app)
 		}
 	}
@@ -313,7 +324,7 @@ extension DockRepository {
 	
 	/// Update running items
 	private func updateRunningState(for app: NSRunningApplication, wasLaunched: Bool = false, wasTerminated: Bool = false) {
-		guard app.activationPolicy == .regular else {
+		guard wasTerminated || app.activationPolicy == .regular, let bundleIdentifier = app.bundleIdentifier else {
 			return
 		}
 		DispatchQueue.main.async { [weak self, app] in
@@ -321,9 +332,9 @@ extension DockRepository {
 				return
 			}
 			/// Check from dock items
-			guard let item = self.defaultItems.first(where: { $0.bundleIdentifier == app.bundleIdentifier }) else {
-				guard let runningItem = self.runningItems.enumerated().first(where: { $0.element.bundleIdentifier == app.bundleIdentifier }) else {
-					if let item = self.createItem(for: app) {
+			guard let item = self.defaultItems.first(where: { $0.bundleIdentifier == bundleIdentifier }) else {
+				guard let runningItem = self.runningItems.enumerated().first(where: { $0.element.bundleIdentifier == bundleIdentifier }) else {
+					if wasTerminated == false, let item = self.createItem(for: app) {
 						self.runningItems.append(item)
 						self.dockDelegate?.didUpdateDockItem(item, at: self.lastValidDockItemsIndex, terminated: false, isDefaults: false)
 					}
@@ -338,7 +349,7 @@ extension DockRepository {
 			item.name  = app.localizedName ?? item.name
 			item.icon  = app.icon ?? item.icon
 			item.pid_t = wasTerminated ? 0 : app.processIdentifier
-			if let runningItemIndex = self.runningItems.firstIndex(where: { $0.bundleIdentifier == app.bundleIdentifier }) {
+			if let runningItemIndex = self.runningItems.firstIndex(where: { $0.bundleIdentifier == bundleIdentifier }) {
 				if wasTerminated {
 					self.runningItems.remove(at: runningItemIndex)
 				}
