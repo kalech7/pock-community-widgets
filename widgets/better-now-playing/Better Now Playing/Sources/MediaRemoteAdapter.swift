@@ -25,6 +25,11 @@ class MediaRemoteAdapter {
     private var streamProcess: Process?
     private var streamPipe: Pipe?
     private var isStreaming = false
+    private var isStoppingStream = false
+    private var streamStartedAt: Date?
+    private var streamRetryAttempt = 0
+    private var streamRetryWorkItem: DispatchWorkItem?
+    private let maxStreamRetryDelay: TimeInterval = 30
     
     // Serial queue handles ALL state mutations - no locks needed, no crashes
     private let stateQueue = DispatchQueue(label: "com.nowplaying.adapter.state")
@@ -67,6 +72,9 @@ class MediaRemoteAdapter {
     
     func startStreaming() {
         guard !isStreaming else { return }
+        streamRetryWorkItem?.cancel()
+        streamRetryWorkItem = nil
+        isStoppingStream = false
         isStreaming = true
         streamProcess = Process()
         streamPipe = Pipe()
@@ -76,16 +84,25 @@ class MediaRemoteAdapter {
         process.executableURL = URL(fileURLWithPath: "/usr/bin/perl")
         process.arguments = [perlScriptPath, frameworkPath, "stream", "--debounce=125"]
         process.standardOutput = pipe
+        process.terminationHandler = { [weak self] process in
+            DispatchQueue.main.async {
+                self?.handleStreamTermination(process)
+            }
+        }
         
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             if data.count > 0 {
+                DispatchQueue.main.async {
+                    self?.streamRetryAttempt = 0
+                }
                 self?.handleStreamData(data)
             }
         }
         
         do {
             try process.run()
+            streamStartedAt = Date()
             print("[MediaRemoteAdapter] Started streaming - PID: \(process.processIdentifier)")
         } catch {
             print("[MediaRemoteAdapter] Error starting stream: \(error)")
@@ -93,10 +110,14 @@ class MediaRemoteAdapter {
             streamProcess = nil
             streamPipe = nil
             isStreaming = false
+            scheduleStreamRestart(reason: "start failed")
         }
     }
     
     func stopStreaming() {
+        isStoppingStream = true
+        streamRetryWorkItem?.cancel()
+        streamRetryWorkItem = nil
         guard isStreaming else { return }
         debounceWorkItem?.cancel()
         debounceWorkItem = nil
@@ -105,6 +126,7 @@ class MediaRemoteAdapter {
         streamPipe?.fileHandleForReading.readabilityHandler = nil
         streamPipe = nil
         isStreaming = false
+        streamStartedAt = nil
         // Clear cached state so the next getNowPlayingInfo call can't return stale data
         // from the previous player during the reconnect window
         stateQueue.async { self._currentInfo = nil }
@@ -176,6 +198,44 @@ class MediaRemoteAdapter {
     }
     
     // MARK: - Private Methods
+
+    private func handleStreamTermination(_ process: Process) {
+        guard let currentProcess = streamProcess, currentProcess === process else { return }
+
+        let shouldRestart = !isStoppingStream
+        let runtime = streamStartedAt.map { Date().timeIntervalSince($0) } ?? 0
+        print("[MediaRemoteAdapter] Stream exited - status: \(process.terminationStatus), runtime: \(runtime)s")
+
+        streamProcess = nil
+        streamPipe?.fileHandleForReading.readabilityHandler = nil
+        streamPipe = nil
+        isStreaming = false
+        streamStartedAt = nil
+
+        if runtime > maxStreamRetryDelay {
+            streamRetryAttempt = 0
+        }
+
+        if shouldRestart {
+            scheduleStreamRestart(reason: "stream exited")
+        }
+    }
+
+    private func scheduleStreamRestart(reason: String) {
+        guard streamRetryWorkItem == nil else { return }
+
+        let delay = min(pow(2.0, Double(streamRetryAttempt)), maxStreamRetryDelay)
+        streamRetryAttempt += 1
+        print("[MediaRemoteAdapter] Scheduling stream restart in \(delay)s - \(reason)")
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            self.streamRetryWorkItem = nil
+            self.startStreaming()
+        }
+        streamRetryWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
     
     private func handleStreamData(_ data: Data) {
         guard let jsonString = String(data: data, encoding: .utf8) else { return }

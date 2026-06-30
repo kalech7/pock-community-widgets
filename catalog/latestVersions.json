@@ -7,10 +7,10 @@
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
-      "changelog": "Fixes local startup crash in Better Now Playing glow animation state while keeping the resource optimizations from 1.05.2.",
+      "changelog": "Restarts the MediaRemote stream automatically when it exits during macOS login so playback appears without relaunching Pock.",
       "core_min": "0.10.0-5",
-      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.3/BetterNowPlayingCommunity.pkarchive",
-      "name": "1.05.3"
+      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.4/BetterNowPlayingCommunity.pkarchive",
+      "name": "1.05.4"
     },
     "community.pock.widgets.dock": {
       "changelog": "Optimizes Dock widget timers, launch events, badge refreshes, and hidden-state teardown.",
