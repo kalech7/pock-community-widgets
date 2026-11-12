@@ -95,14 +95,11 @@ class NowPlayingView: PKView {
         NotificationCenter.default.addObserver(self, selector: #selector(handleInactivityPreferenceChange), name: Notification.Name(didChangeInactivityTimeoutNotification), object: nil)
     }
     
-    convenience init(frame: NSRect, shouldLoadHelper: Bool) {
-        self.init(frame: frame)
+    convenience init(widgetFrame: NSRect) {
+        self.init(frame: widgetFrame)
         configureStackView()
         configureUIElements()
-        if shouldLoadHelper {
-            helper = NowPlayingHelper(forView: self)
-            registerForNotifications()
-        }
+        registerForNotifications()
         UpdateChecker.checkForUpdate { [weak self] available, version in
             guard available, let self = self else { return }
             let banner = UpdateBannerView(frame: .zero)
@@ -111,6 +108,18 @@ class NowPlayingView: PKView {
         }
     }
     
+    func startPlaybackUpdates() {
+        guard helper == nil else { return }
+        helper = NowPlayingHelper(forView: self)
+        updateContentViews()
+    }
+
+    func stopPlaybackUpdates() {
+        guard helper != nil else { return }
+        itemView?.prepareForHiddenState()
+        helper = nil
+    }
+
     /// Configuration
     private func configureStackView() {
         stackView.orientation = .horizontal
@@ -209,10 +218,7 @@ class NowPlayingView: PKView {
     
     /// Update
     @objc internal func updateContentViews() {
-        print("[NowPlayingView] updateContentViews called - shouldHideWidget: \(shouldHideWidget)")
-        
         if shouldHideWidget {
-            print("[NowPlayingView] updateContentViews - hiding widget")
             itemView?.prepareForHiddenState()
             // Hide subviews rather than destroying them so we don't lose state
             for view in stackView.arrangedSubviews {
@@ -223,7 +229,6 @@ class NowPlayingView: PKView {
         
         // Ensure views exist
         if stackView.arrangedSubviews.isEmpty {
-            print("[NowPlayingView] updateContentViews - stackView empty, configuring UI")
             configureUIElements()
         } else {
             // Unhide any previously hidden subviews
@@ -232,14 +237,10 @@ class NowPlayingView: PKView {
             }
         }
         
-        print("[NowPlayingView] updateContentViews - style: \(style)")
-        
         switch style {
         case .default, .onlyInfo:
-            print("[NowPlayingView] updateContentViews - updating itemView with item: \(item?.title ?? "nil")")
             itemView?.updateUIState(for: item)
         case .playPause:
-            print("[NowPlayingView] updateContentViews - updating playPauseButton")
             playPauseButton?.image = NSImage(named: item?.isPlaying ?? false ? pauseIconName : playIconName)!
         }
     }

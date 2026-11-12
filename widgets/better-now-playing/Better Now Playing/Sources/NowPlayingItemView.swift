@@ -27,6 +27,9 @@ class NowPlayingItemView: PKDetailView {
     /// Data
     private var nowPLayingItem: NowPlayingItem?
     private var containerConstraints: [NSLayoutConstraint] = []
+    private var imageWidthConstraint: NSLayoutConstraint?
+    private var imageSquareConstraint: NSLayoutConstraint?
+    private var bounceSourceKey: String?
     private var glowSourceKey: String?
     private var pendingGlowSourceKey: String?
     
@@ -59,7 +62,7 @@ class NowPlayingItemView: PKDetailView {
     override func didLoad() {
         canScrollTitle = true
         canScrollSubtitle = true
-        titleView.numberOfLoop = 3
+        titleView.numberOfLoop = 1
         subtitleView.numberOfLoop = 1
         
         imageView.wantsLayer = true
@@ -69,6 +72,14 @@ class NowPlayingItemView: PKDetailView {
         labelsContainer.distribution = .fillEqually
         labelsContainer.spacing = 0
         labelsContainer.alignment = .leading
+        for textView in [titleView, subtitleView].compactMap({ $0 }) {
+            // The marquee draws a second copy while scrolling. Clip both copies
+            // to the text lane so they cannot cross onto the album artwork.
+            textView.wantsLayer = true
+            textView.layer?.masksToBounds = true
+            textView.trailingAnchor.constraint(equalTo: labelsContainer.trailingAnchor).isActive = true
+        }
+        imageView.heightAnchor.constraint(equalTo: contentContainer.heightAnchor).isActive = true
         
         updateUIState(for: nil)
         super.didLoad()
@@ -86,23 +97,19 @@ class NowPlayingItemView: PKDetailView {
     }
     
     @objc private func handleFixedWidthChange() {
-        // Re-apply the current item with the new width setting
         updateUIState(for: nowPLayingItem)
+        updateConstraint()
     }
     
     override func updateConstraint() {
-        super.updateConstraint()
-        guard let container = contentContainer, let superview = container.superview else { return }
-        // Remove PKDetailView's asymmetric top(4)+bottom(2) insets
-        superview.constraints.forEach {
-            guard ($0.firstItem as? NSView == container || $0.secondItem as? NSView == container) else { return }
-            if $0.firstAttribute == .top || $0.firstAttribute == .bottom ||
-               $0.secondAttribute == .top || $0.secondAttribute == .bottom {
-                $0.isActive = false
-            }
+        guard let container = contentContainer, let superview = container.superview else {
+            return
         }
+
         let inset = artworkInset
         container.translatesAutoresizingMaskIntoConstraints = false
+        deactivateContentContainerEdgeConstraints(container, in: superview)
+
         NSLayoutConstraint.deactivate(containerConstraints)
         containerConstraints = [
             container.topAnchor.constraint(equalTo: superview.topAnchor, constant: inset),
@@ -110,12 +117,27 @@ class NowPlayingItemView: PKDetailView {
             container.leadingAnchor.constraint(equalTo: superview.leadingAnchor),
             container.trailingAnchor.constraint(equalTo: superview.trailingAnchor)
         ]
-        NSLayoutConstraint.activate(containerConstraints)
-        // Make image square at full available height
-        if !shouldHideIcon {
-            imageView.constraints.filter { $0.firstAttribute == .width }.forEach { $0.isActive = false }
-            imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor).isActive = true
+        containerConstraints.enumerated().forEach { index, constraint in
+            constraint.identifier = "nowPlaying.contentContainer.edge.\(index)"
         }
+        NSLayoutConstraint.activate(containerConstraints)
+
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        if shouldHideIcon {
+            imageSquareConstraint?.isActive = false
+            let constraint = imageWidthConstraint ?? imageView.widthAnchor.constraint(equalToConstant: 0)
+            constraint.identifier = "nowPlaying.image.width"
+            constraint.constant = 0
+            constraint.isActive = true
+            imageWidthConstraint = constraint
+        } else {
+            imageWidthConstraint?.isActive = false
+            let constraint = imageSquareConstraint ?? imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor)
+            constraint.identifier = "nowPlaying.image.square"
+            constraint.isActive = true
+            imageSquareConstraint = constraint
+        }
+
         // Correct width constraint — PKDetailView assumes 24pt image, we use actual size
         let actualImagePt = 30 - (inset * 2)
         let correctedWidth = contentWidth - 24 + actualImagePt + contentContainer.spacing
@@ -131,6 +153,24 @@ class NowPlayingItemView: PKDetailView {
 
         if let widthConstraint = container.constraints.first(where: { $0.identifier == "contentContainer.width" }) {
             widthConstraint.constant = cappedWidth
+            widthConstraint.isActive = true
+        } else {
+            let widthConstraint = container.widthAnchor.constraint(equalToConstant: cappedWidth)
+            widthConstraint.identifier = "contentContainer.width"
+            widthConstraint.isActive = true
+        }
+    }
+
+    private func deactivateContentContainerEdgeConstraints(_ container: NSView, in superview: NSView) {
+        superview.constraints.forEach { constraint in
+            guard constraint.firstItem as AnyObject? === container || constraint.secondItem as AnyObject? === container else {
+                return
+            }
+            let attributes: Set<NSLayoutConstraint.Attribute> = [.top, .bottom, .leading, .trailing]
+            guard attributes.contains(constraint.firstAttribute) || attributes.contains(constraint.secondAttribute) else {
+                return
+            }
+            constraint.isActive = false
         }
     }
     
@@ -157,15 +197,14 @@ class NowPlayingItemView: PKDetailView {
     
     // PKDetailView.startBounceAnimation() is in a non-open extension so can't be overridden.
     // We add our own smoother animation directly and call this instead.
-    private func startSmoothBounceAnimation() {
-        guard let layer = imageView?.layer else { return }
-        guard layer.animation(forKey: "kBounceAnimationKey") == nil else { return }
+    private func startSmoothBounceAnimation(for track: String) {
+        guard let layer = imageView?.layer, bounceSourceKey != track else { return }
+        bounceSourceKey = track
         let bounce = CABasicAnimation(keyPath: "transform.scale")
         bounce.fromValue = 0.88
         bounce.toValue = 1.0
-        bounce.duration = 1.0
+        bounce.duration = 0.55
         bounce.autoreverses = true
-        bounce.repeatCount = .infinity
         bounce.timingFunction = CAMediaTimingFunction(controlPoints: 0.45, 0.0, 0.55, 1.0)
         layer.add(bounce, forKey: "kBounceAnimationKey")
     }
@@ -225,18 +264,16 @@ class NowPlayingItemView: PKDetailView {
         let pulse = CABasicAnimation(keyPath: "opacity")
         pulse.fromValue = 0.0
         pulse.toValue = glowOpacity
-        pulse.duration = 1.5
+        pulse.duration = 0.75
         pulse.autoreverses = true
-        pulse.repeatCount = .infinity
         pulse.timingFunction = CAMediaTimingFunction(controlPoints: 0.45, 0.0, 0.55, 1.0)
         glowLayer.add(pulse, forKey: "kGlowAnimationKey")
         
         let expand = CABasicAnimation(keyPath: "endPoint")
         expand.fromValue = CGPoint(x: 0.6, y: 0.6)
         expand.toValue = CGPoint(x: 1.2, y: 1.2)
-        expand.duration = 1.5
+        expand.duration = pulse.duration
         expand.autoreverses = true
-        expand.repeatCount = .infinity
         expand.timingFunction = CAMediaTimingFunction(controlPoints: 0.45, 0.0, 0.55, 1.0)
         glowLayer.add(expand, forKey: "kGlowExpandKey")
         glowSourceKey = sourceKey
@@ -265,9 +302,7 @@ class NowPlayingItemView: PKDetailView {
         guard let item = self.nowPLayingItem, let client = item.client else {
             let appBundleIdentifier: String = Preferences[.defaultPlayer]
             imageView.image = NSWorkspace.shared.applicationIcon(for: appBundleIdentifier, fallbackFileType: "mp3")
-            maxWidth = effectiveMaxWidth
-            set(title: NSWorkspace.shared.applicationName(for: appBundleIdentifier))
-            subtitleView.isHidden = true
+            updateLabels(title: NSWorkspace.shared.applicationName(for: appBundleIdentifier), subtitle: nil)
             return
         }
         if let artwork = item.artwork {
@@ -277,37 +312,42 @@ class NowPlayingItemView: PKDetailView {
         }
         let artworkSize: Int = Preferences[.artworkSize]
         pendingGlowSourceKey = "\(item.title ?? "")|\(item.artist ?? "")|\(item.artwork != nil)|\(artworkSize)"
-        // Set maxWidth BEFORE set(title:) so updateConstraint sees the cap in time
-        maxWidth = effectiveMaxWidth
-        
         var title = item.title ?? (item.artist == nil ? client.displayName : "Missing title") ?? "Missing title"
         if title.isEmpty {
             title = "Missing title"
         }
-        set(title: title)
-        
-        if let subtitle = item.artist ?? (item.title != nil ? client.displayName : nil), subtitle.isEmpty == false {
-            subtitleView.isHidden = false
-            set(subtitle: subtitle)
-        } else {
-            subtitleView.isHidden = true
-        }
+        updateLabels(title: title, subtitle: item.artist ?? (item.title != nil ? client.displayName : nil))
     }
-    
+
+    private func updateLabels(title: String?, subtitle: String?) {
+        let width = effectiveMaxWidth
+        let widthChanged = maxWidth != width
+        if widthChanged { maxWidth = width }
+        let speed: Double? = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : nil
+        if widthChanged || (titleView.text as String? ?? "") != (title ?? "") {
+            set(title: title, speed: speed)
+        }
+        if widthChanged || (subtitleView.text as String? ?? "") != (subtitle ?? "") {
+            set(subtitle: subtitle, speed: speed)
+        }
+        subtitleView.isHidden = subtitle?.isEmpty ?? true
+    }
+
     private func updateForNowPlayingState() {
-        let playing = self.nowPLayingItem?.isPlaying ?? false
-        if Preferences[.animateIconWhilePlaying], playing {
-            self.startSmoothBounceAnimation()
+        let playing = nowPLayingItem?.isPlaying == true && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        if playing, Preferences[.animateIconWhilePlaying], let item = nowPLayingItem {
+            startSmoothBounceAnimation(for: "\(item.title ?? "")|\(item.artist ?? "")|\(item.album ?? "")")
         } else {
-            self.stopBounceAnimation()
+            bounceSourceKey = nil
+            stopBounceAnimation()
         }
         if playing && Preferences[.artworkGlow] {
-            self.startGlowAnimation()
+            startGlowAnimation()
         } else {
-            self.stopGlowAnimation()
+            stopGlowAnimation()
         }
     }
-    
+
     override open func didTapHandler() {
         self.didTap?()
     }
@@ -347,8 +387,13 @@ class NowPlayingItemView: PKDetailView {
     }
 
     internal func prepareForHiddenState() {
-        self.stopBounceAnimation()
-        self.stopGlowAnimation()
+        bounceSourceKey = nil
+        stopBounceAnimation()
+        stopGlowAnimation()
+        for textView in [titleView, subtitleView].compactMap({ $0 }) {
+            textView.speed = 0
+            textView.set(speed: 0)
+        }
     }
     
 }

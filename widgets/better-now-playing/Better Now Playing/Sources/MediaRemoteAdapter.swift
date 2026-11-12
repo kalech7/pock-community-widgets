@@ -30,9 +30,17 @@ class MediaRemoteAdapter {
     private var streamRetryAttempt = 0
     private var streamRetryWorkItem: DispatchWorkItem?
     private let maxStreamRetryDelay: TimeInterval = 30
+    private var streamGeneration = 0
+
+    // FileHandle can split a single NDJSON record across arbitrary callbacks.
+    // Keep parsing state on its own queue and reject data from older processes.
+    private let streamParsingQueue = DispatchQueue(label: "com.nowplaying.adapter.stream-parsing")
+    private var activeParserGeneration = 0
+    private var streamBuffer = Data()
     
     // Serial queue handles ALL state mutations - no locks needed, no crashes
     private let stateQueue = DispatchQueue(label: "com.nowplaying.adapter.state")
+    private var _activeStreamGeneration = 0
     private var _currentInfo: NowPlayingInfo?
     private(set) var currentInfo: NowPlayingInfo? {
         get { stateQueue.sync { _currentInfo } }
@@ -71,11 +79,18 @@ class MediaRemoteAdapter {
     // MARK: - Public API
     
     func startStreaming() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.startStreaming()
+            }
+            return
+        }
         guard !isStreaming else { return }
         streamRetryWorkItem?.cancel()
         streamRetryWorkItem = nil
         isStoppingStream = false
         isStreaming = true
+        let generation = advanceStreamGeneration()
         streamProcess = Process()
         streamPipe = Pipe()
         
@@ -90,13 +105,18 @@ class MediaRemoteAdapter {
             }
         }
         
-        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+        pipe.fileHandleForReading.readabilityHandler = { [weak self, weak process] handle in
             let data = handle.availableData
-            if data.count > 0 {
-                DispatchQueue.main.async {
-                    self?.streamRetryAttempt = 0
+            guard !data.isEmpty else { return }
+            DispatchQueue.main.async {
+                guard let self = self,
+                      let process = process,
+                      self.streamProcess === process,
+                      self.streamGeneration == generation else {
+                    return
                 }
-                self?.handleStreamData(data)
+                self.streamRetryAttempt = 0
+                self.handleStreamData(data, generation: generation)
             }
         }
         
@@ -107,6 +127,8 @@ class MediaRemoteAdapter {
         } catch {
             print("[MediaRemoteAdapter] Error starting stream: \(error)")
             // Reset all streaming state so startStreaming() can be retried
+            pipe.fileHandleForReading.readabilityHandler = nil
+            _ = advanceStreamGeneration()
             streamProcess = nil
             streamPipe = nil
             isStreaming = false
@@ -115,18 +137,25 @@ class MediaRemoteAdapter {
     }
     
     func stopStreaming() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.stopStreaming()
+            }
+            return
+        }
         isStoppingStream = true
         streamRetryWorkItem?.cancel()
         streamRetryWorkItem = nil
-        guard isStreaming else { return }
         debounceWorkItem?.cancel()
         debounceWorkItem = nil
-        streamProcess?.terminate()
-        streamProcess = nil
+        _ = advanceStreamGeneration()
+        let process = streamProcess
         streamPipe?.fileHandleForReading.readabilityHandler = nil
+        streamProcess = nil
         streamPipe = nil
         isStreaming = false
         streamStartedAt = nil
+        if let process = process, process.isRunning { process.terminate() }
         // Clear cached state so the next getNowPlayingInfo call can't return stale data
         // from the previous player during the reconnect window
         stateQueue.async { self._currentInfo = nil }
@@ -134,6 +163,7 @@ class MediaRemoteAdapter {
     }
     
     func getNowPlayingInfo(completion: @escaping (NowPlayingInfo?) -> Void) {
+        let generation = stateQueue.sync { _activeStreamGeneration }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { completion(nil); return }
             
@@ -150,12 +180,21 @@ class MediaRemoteAdapter {
                 let info = self.parseNowPlayingData(data)
                 // Store the result so subsequent diff updates have a valid base state
                 if let info = info {
-                    self.stateQueue.async { self._currentInfo = info }
+                    self.stateQueue.async {
+                        guard self._activeStreamGeneration == generation else { return }
+                        self._currentInfo = info
+                    }
                 }
-                DispatchQueue.main.async { completion(info) }
+                DispatchQueue.main.async {
+                    guard self.streamGeneration == generation else { return }
+                    completion(info)
+                }
             } catch {
                 print("[MediaRemoteAdapter] Error getting info: \(error)")
-                DispatchQueue.main.async { completion(nil) }
+                DispatchQueue.main.async {
+                    guard self.streamGeneration == generation else { return }
+                    completion(nil)
+                }
             }
         }
     }
@@ -188,6 +227,7 @@ class MediaRemoteAdapter {
     }
     
     private func forceStateRefresh() {
+        guard !isStoppingStream else { return }
         print("[MediaRemoteAdapter] Forcing state refresh")
         getNowPlayingInfo { [weak self] info in
             guard let self = self else { return }
@@ -211,54 +251,88 @@ class MediaRemoteAdapter {
         streamPipe = nil
         isStreaming = false
         streamStartedAt = nil
+        let retryGeneration = advanceStreamGeneration()
 
         if runtime > maxStreamRetryDelay {
             streamRetryAttempt = 0
         }
 
         if shouldRestart {
-            scheduleStreamRestart(reason: "stream exited")
+            scheduleStreamRestart(reason: "stream exited", generation: retryGeneration)
         }
     }
 
-    private func scheduleStreamRestart(reason: String) {
+    private func scheduleStreamRestart(reason: String, generation: Int? = nil) {
         guard streamRetryWorkItem == nil else { return }
 
         let delay = min(pow(2.0, Double(streamRetryAttempt)), maxStreamRetryDelay)
         streamRetryAttempt += 1
+        let expectedGeneration = generation ?? streamGeneration
         print("[MediaRemoteAdapter] Scheduling stream restart in \(delay)s - \(reason)")
 
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             self.streamRetryWorkItem = nil
+            guard self.streamGeneration == expectedGeneration,
+                  self.isStoppingStream == false else {
+                return
+            }
             self.startStreaming()
         }
         streamRetryWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
     
-    private func handleStreamData(_ data: Data) {
-        guard let jsonString = String(data: data, encoding: .utf8) else { return }
-        let lines = jsonString.components(separatedBy: .newlines)
-        for line in lines {
-            guard !line.isEmpty, let lineData = line.data(using: .utf8) else { continue }
-            do {
-                if let json = try JSONSerialization.jsonObject(with: lineData) as? [String: Any] {
-                    handleStreamUpdate(json)
+    @discardableResult
+    private func advanceStreamGeneration() -> Int {
+        streamGeneration += 1
+        let generation = streamGeneration
+        stateQueue.sync {
+            _activeStreamGeneration = generation
+            _pendingBundleIdChanged = false
+            _pendingIsPlayingChanged = false
+        }
+        streamParsingQueue.async { [weak self] in
+            guard let self = self else { return }
+            self.activeParserGeneration = generation
+            self.streamBuffer.removeAll()
+        }
+        return generation
+    }
+
+    private func handleStreamData(_ data: Data, generation: Int) {
+        streamParsingQueue.async { [weak self] in
+            guard let self = self,
+                  self.activeParserGeneration == generation else {
+                return
+            }
+            self.streamBuffer.append(data)
+            while let newlineIndex = self.streamBuffer.firstIndex(of: 0x0A) {
+                var lineData = Data(self.streamBuffer[..<newlineIndex])
+                self.streamBuffer.removeSubrange(self.streamBuffer.startIndex...newlineIndex)
+                if lineData.last == 0x0D {
+                    lineData.removeLast()
                 }
-            } catch { continue }
+                guard !lineData.isEmpty else { continue }
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: lineData) as? [String: Any] {
+                        self.handleStreamUpdate(json, generation: generation)
+                    }
+                } catch {
+                    print("[MediaRemoteAdapter] Invalid stream record: \(error)")
+                }
+            }
         }
     }
     
-    private func handleStreamUpdate(_ json: [String: Any]) {
+    private func handleStreamUpdate(_ json: [String: Any], generation: Int) {
         guard let type = json["type"] as? String, type == "data" else { return }
         guard let payload = json["payload"] as? [String: Any] else { return }
-        
-        print("[MediaRemoteAdapter] Received update")
         
         // All state reads and writes happen on stateQueue to avoid data races
         stateQueue.async { [weak self] in
             guard let self = self else { return }
+            guard self._activeStreamGeneration == generation else { return }
             
             // Suppress updates during command window - blocks stale song flash on skip
             if let lastCmd = self._lastCommandTime {
@@ -290,6 +364,10 @@ class MediaRemoteAdapter {
                 return
             }
             
+            if let previous = self._currentInfo, let next = newInfo, next.hasSameDisplayState(as: previous) {
+                return
+            }
+
             // Track what changed for accurate notification posting
             let bundleIdChanged  = self._currentInfo?.bundleIdentifier != newInfo?.bundleIdentifier
             let isPlayingChanged = self._currentInfo?.isPlaying != newInfo?.isPlaying
@@ -304,9 +382,10 @@ class MediaRemoteAdapter {
             // Schedule debounced flush on main queue
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
+                guard self.streamGeneration == generation else { return }
                 self.debounceWorkItem?.cancel()
                 let workItem = DispatchWorkItem { [weak self] in
-                    self?.flushNotifications()
+                    self?.flushNotifications(generation: generation)
                 }
                 self.debounceWorkItem = workItem
                 DispatchQueue.main.asyncAfter(deadline: .now() + self.debounceInterval, execute: workItem)
@@ -314,13 +393,14 @@ class MediaRemoteAdapter {
         }
     }
     
-    private func flushNotifications() {
-        print("[MediaRemoteAdapter] Flushing notifications")
+    private func flushNotifications(generation: Int) {
+        guard streamGeneration == generation else { return }
         
         // Atomically read and clear the accumulated flags
         var bundleIdChanged  = false
         var isPlayingChanged = false
         stateQueue.sync {
+            guard _activeStreamGeneration == generation else { return }
             bundleIdChanged  = _pendingBundleIdChanged
             isPlayingChanged = _pendingIsPlayingChanged
             _pendingBundleIdChanged  = false
@@ -416,6 +496,12 @@ struct NowPlayingInfo {
     /// whether it has been decoded yet. Use this instead of `artwork != nil` for
     /// deciding whether to fall back to the iTunes API.
     var hasAdapterArtwork: Bool { artworkData != nil }
+
+    func hasSameDisplayState(as other: NowPlayingInfo) -> Bool {
+        bundleIdentifier == other.bundleIdentifier && parentApplicationBundleIdentifier == other.parentApplicationBundleIdentifier &&
+            isPlaying == other.isPlaying && title == other.title && artist == other.artist && album == other.album &&
+            artworkData == other.artworkData && artworkMimeType == other.artworkMimeType
+    }
 }
 
 enum MediaRemoteCommand: Int {

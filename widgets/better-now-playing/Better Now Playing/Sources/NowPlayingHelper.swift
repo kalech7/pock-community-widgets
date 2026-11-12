@@ -16,7 +16,7 @@ extension Notification.Name {
 
 class NowPlayingHelper {
     private enum Constants {
-        static let periodicRefreshInterval: TimeInterval = 5
+        static let periodicRefreshInterval: TimeInterval = 30
         static let nativeTouchUIKillInterval: TimeInterval = 2
     }
     
@@ -34,7 +34,7 @@ class NowPlayingHelper {
     /// Ref
     internal weak var view: NowPlayingView?
     
-    /// Periodic refresh timer to catch missed updates
+    /// Slow fallback for updates missed by the MediaRemote stream
     private var refreshTimer: Timer?
     /// Repeating timer that kills NowPlayingTouchUI if it respawns despite launchctl disable
     private var killTimer: Timer?
@@ -100,7 +100,7 @@ class NowPlayingHelper {
         let timer = Timer(timeInterval: Constants.periodicRefreshInterval, repeats: true) { [weak self] _ in
             self?.periodicRefresh()
         }
-        timer.tolerance = 1
+        timer.tolerance = 5
         RunLoop.main.add(timer, forMode: .common)
         refreshTimer = timer
     }
@@ -195,10 +195,13 @@ class NowPlayingHelper {
             let artistChanged    = self.currentNowPlayingItem?.artist   != info?.artist
             let albumChanged     = self.currentNowPlayingItem?.album    != info?.album
             let isPlayingChanged = self.currentNowPlayingItem?.isPlaying != info?.isPlaying
+            let client = self.currentNowPlayingItem?.client
+            let playerChanged = client?.bundleIdentifier != info?.bundleIdentifier ||
+                client?.parentApplicationBundleIdentifier != info?.parentApplicationBundleIdentifier
             // Treat artwork as changed if adapter has data but we're showing nothing
             let artworkChanged   = info?.artworkData != nil && self.currentNowPlayingItem?.artwork == nil
             
-            if titleChanged || artistChanged || albumChanged || isPlayingChanged || artworkChanged {
+            if titleChanged || artistChanged || albumChanged || isPlayingChanged || artworkChanged || playerChanged {
                 print("[NowPlayingHelper] Periodic refresh detected state change - updating")
                 self.updateWithInfo(info)
             }
@@ -209,10 +212,6 @@ class NowPlayingHelper {
         NSLog("[NOW_PLAYING]: NowPlayingHelper - registerForNotifications")
         
         // Subscribe to MediaRemoteAdapter notifications
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(updateCurrentPlayingApp),
-                                               name: .mediaRemoteAdapterNowPlayingApplicationDidChange,
-                                               object: nil)
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(updateMediaContent),
                                                name: .mediaRemoteAdapterNowPlayingInfoDidChange,
@@ -252,9 +251,9 @@ class NowPlayingHelper {
     private func unregisterForNotifications() {
         NSLog("[NOW_PLAYING]: NowPlayingHelper - un-registerForNotifications")
         
-        NotificationCenter.default.removeObserver(self, name: .mediaRemoteAdapterNowPlayingApplicationDidChange, object: nil)
         NotificationCenter.default.removeObserver(self, name: .mediaRemoteAdapterNowPlayingInfoDidChange, object: nil)
         NotificationCenter.default.removeObserver(self, name: .mediaRemoteAdapterIsPlayingDidChange, object: nil)
+        NotificationCenter.default.removeObserver(self, name: Notification.Name(didChangeDisableNativeNowPlayingNotification), object: nil)
         
         // Remove workspace observers
         NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.didLaunchApplicationNotification, object: nil)
@@ -267,7 +266,7 @@ class NowPlayingHelper {
         stopKillTimer()
         stopInactivityTimer()
         
-        // Cancel any pending artwork fallback
+        latestArtworkTask?.cancel()
         artworkFallbackWorkItem?.cancel()
         artworkFallbackWorkItem = nil
         
@@ -296,16 +295,6 @@ class NowPlayingHelper {
                 )
             }
             
-            self.updateWithInfo(info)
-        }
-    }
-    
-    @objc private func updateCurrentPlayingApp(_ notification: Notification?) {
-        print("[NowPlayingHelper] updateCurrentPlayingApp called")
-        // Always do a fresh fetch so we get the actual current player,
-        // not stale cached info from the previous app.
-        MediaRemoteAdapter.shared.getNowPlayingInfo { [weak self] info in
-            guard let self = self else { return }
             self.updateWithInfo(info)
         }
     }

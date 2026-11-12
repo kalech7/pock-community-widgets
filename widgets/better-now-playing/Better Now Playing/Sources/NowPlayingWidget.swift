@@ -15,13 +15,23 @@ class NowPlayingWidget: PKWidget {
     static var identifier: String = "NowPlayingWidget"
     var customizationLabel: String = "Better Now Playing"
     var view: NSView!
+    private let playbackView: NowPlayingView
     
     static var preferenceClass: PKWidgetPreference.Type? = NowPlayingPreferencePane.self
     
     required init() {
-        view = NowPlayingView(frame: NSRect(x: 0, y: 0, width: 120, height: 30), shouldLoadHelper: true)
+        playbackView = NowPlayingView(widgetFrame: NSRect(x: 0, y: 0, width: 120, height: 30))
+        view = playbackView
     }
     
+    func viewDidAppear() {
+        playbackView.startPlaybackUpdates()
+    }
+
+    func viewDidDisappear() {
+        playbackView.stopPlaybackUpdates()
+    }
+
     deinit {
         NSLog("[NOW_PLAYING]: NowPlayingWidget - deinit")
         view.removeFromSuperview()

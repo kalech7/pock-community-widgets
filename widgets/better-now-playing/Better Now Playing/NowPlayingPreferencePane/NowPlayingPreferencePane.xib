@@ -196,7 +196,7 @@
                                 </textField>
                                 <button tag="1" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="VA9-bL-MAf">
                                     <rect key="frame" x="0.0" y="264" width="210" height="16"/>
-                                    <buttonCell key="cell" type="check" title="Animate icon size while playing" bezelStyle="regularSquare" imagePosition="left" inset="2" id="4Dg-PS-L8w">
+                                    <buttonCell key="cell" type="check" title="Brief artwork animation" bezelStyle="regularSquare" imagePosition="left" inset="2" id="4Dg-PS-L8w">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="system"/>
                                     </buttonCell>
@@ -206,7 +206,7 @@
                                 </button>
                                 <button tag="4" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="V4d-IO-PCr">
                                     <rect key="frame" x="0.0" y="233" width="186" height="16"/>
-                                    <buttonCell key="cell" type="check" title="Animate glow while playing" bezelStyle="regularSquare" imagePosition="left" inset="2" id="EcV-hw-vXl">
+                                    <buttonCell key="cell" type="check" title="Brief artwork glow" bezelStyle="regularSquare" imagePosition="left" inset="2" id="EcV-hw-vXl">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="system"/>
                                     </buttonCell>
