@@ -1,16 +1,16 @@
 {
   "core": {
-    "changelog": "Fixes a Touch Bar dimming crash and reduces refresh and drawing work in AI Activity and Weather.",
+    "changelog": "Adds Next Meeting reminders and reduces refresh and drawing work in Weather and Calendar.",
     "core_min": null,
-    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-14",
-    "name": "0.10.1-14"
+    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-15",
+    "name": "0.10.1-15"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
-      "changelog": "Restarts the MediaRemote stream automatically when it exits during macOS login so playback appears without relaunching Pock.",
+      "changelog": "Pauses playback updates while the widget is hidden, reduces background polling and continuous animations, and keeps scrolling track text clear of album artwork.",
       "core_min": "0.10.0-5",
-      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.4/BetterNowPlayingCommunity.pkarchive",
-      "name": "1.05.4"
+      "link": "https://github.com/kalech7/pock-community-widgets/releases/download/better-now-playing-community-1.05.5/BetterNowPlayingCommunity.pkarchive",
+      "name": "1.05.5"
     },
     "community.pock.widgets.dock": {
       "changelog": "Keeps running app state in sync so closed apps disappear smoothly and running-only Dock layouts stay current.",
