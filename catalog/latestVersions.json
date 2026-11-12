@@ -1,9 +1,9 @@
 {
   "core": {
-    "changelog": "Adds compact weather and running agent sessions to the Touch Bar, and improves switching and widget discovery.",
+    "changelog": "Shows Weather and AI Activity in Widgets Manager alongside installed widgets.",
     "core_min": null,
-    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-12",
-    "name": "0.10.1-12"
+    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-13",
+    "name": "0.10.1-13"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
