@@ -1,9 +1,9 @@
 {
   "core": {
-    "changelog": "Shows Weather and AI Activity in Widgets Manager alongside installed widgets.",
+    "changelog": "Fixes a Touch Bar dimming crash and reduces refresh and drawing work in AI Activity and Weather.",
     "core_min": null,
-    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-13",
-    "name": "0.10.1-13"
+    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-14",
+    "name": "0.10.1-14"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
