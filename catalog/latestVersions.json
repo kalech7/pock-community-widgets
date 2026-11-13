@@ -1,9 +1,9 @@
 {
   "core": {
-    "changelog": "Adds Next Meeting reminders and reduces refresh and drawing work in Weather and Calendar.",
+    "changelog": "Adds Audio Output to AI Activity and simplifies Codex session labels.",
     "core_min": null,
-    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-15",
-    "name": "0.10.1-15"
+    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-16",
+    "name": "0.10.1-16"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {

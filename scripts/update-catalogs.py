@@ -8,7 +8,7 @@ import widget_metadata
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CATALOG_DIR = ROOT / "catalog"
-CORE_VERSION = "0.10.1-15"
+CORE_VERSION = "0.10.1-16"
 
 
 def main():
@@ -18,7 +18,7 @@ def main():
         "core": {
             "name": CORE_VERSION,
             "link": f"https://github.com/kalech7/pock-community/releases/tag/v{CORE_VERSION}",
-            "changelog": "Adds Next Meeting reminders and reduces refresh and drawing work in Weather and Calendar.",
+            "changelog": "Adds Audio Output to AI Activity and simplifies Codex session labels.",
             "core_min": None,
         },
         "widgets": {},
