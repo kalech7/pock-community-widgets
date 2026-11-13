@@ -1,9 +1,9 @@
 {
   "core": {
-    "changelog": "Adds Audio Output to AI Activity and simplifies Codex session labels.",
+    "changelog": "Shows the saved titles of active Codex chats, scrolls long titles, and opens the selected conversation from the Touch Bar.",
     "core_min": null,
-    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-16",
-    "name": "0.10.1-16"
+    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-17",
+    "name": "0.10.1-17"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
