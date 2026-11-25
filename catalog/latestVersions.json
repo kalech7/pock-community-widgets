@@ -1,9 +1,9 @@
 {
   "core": {
-    "changelog": "Shows the saved titles of active Codex chats, scrolls long titles, and opens the selected conversation from the Touch Bar.",
+    "changelog": "Restores Status, adds a two-menu layout editor, and fixes a blank Touch Bar when returning to the main menu.",
     "core_min": null,
-    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-17",
-    "name": "0.10.1-17"
+    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-18",
+    "name": "0.10.1-18"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
