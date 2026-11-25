@@ -1,9 +1,9 @@
 {
   "core": {
-    "changelog": "Restores Status, adds a two-menu layout editor, and fixes a blank Touch Bar when returning to the main menu.",
+    "changelog": "Adds AWS Status to both Touch Bar menus with EC2, RDS, local job and local cost indicators.",
     "core_min": null,
-    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-18",
-    "name": "0.10.1-18"
+    "link": "https://github.com/kalech7/pock-community/releases/tag/v0.10.1-19",
+    "name": "0.10.1-19"
   },
   "widgets": {
     "community.pock.widgets.betternowplaying": {
